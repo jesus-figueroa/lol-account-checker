@@ -1,4 +1,4 @@
-# lol-account-checker
+# League Of Legends Account Checker
 Retrieve information about a league of legends account. Region independent, it will return the following values:
 
 * Region

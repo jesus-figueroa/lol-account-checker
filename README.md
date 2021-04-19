@@ -14,7 +14,13 @@ Retrieve information about a league of legends account. Region independent, it w
 
 ## Usage
 
-Start by opening the **lolchecker.py** and placing your account(s) in the **ACCOUNTS** variable like below (seperate with commas for multiple accounts):
+Install requests
+
+```
+pip install requests
+```
+
+Open the **lolchecker.py** and place your account(s) in the **ACCOUNTS** variable like below (seperate with commas for multiple accounts):
 
 ```
 ACCOUNTS = "user:pass,user1:pass1"

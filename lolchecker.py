@@ -177,7 +177,7 @@ class AccountChecker:
         rp_curr = balance['rp']
         ip_curr = balance['ip']
         rank = self.get_rank()
-        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", "\n", "\n", f"Champions: {champions}", "\n", "\n", f"Skins: {champion_skins}"]
+        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", "\n", "\n", f"Champions ({len(inventory_data['CHAMPION'])}): {champions}", "\n", "\n", f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}"]
         return ' | '.join(ret_str)
 
     def _date_readable(self, variable):    

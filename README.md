@@ -6,7 +6,7 @@ Retrieve information about a league of legends account. Region independent, it w
 * Login
 * Last Game
 * Level
-* Rank
+* Rank & LP
 * IP & RP
 * Refundable IP & RP
 * Champions

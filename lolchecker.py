@@ -159,9 +159,9 @@ class AccountChecker:
     def get_rank(self):
         rank_url = f"https://lolprofile.net/index.php?page=summoner&ajaxr=1&region={self.user_info['region']['tag']}&name={self.user_info['lol_account']['summoner_name']}"
         page = requests.get(rank_url).text
-        pattern = '(?<=-block">)(.*?)(?=</div>)'
-        rank = re.search(pattern, page)
-        return rank.group() if rank is not None else "Unranked"
+        pattern = '((?<="tier">)(.*?)(?=<)|(?<="lp">)(.*?)(?=<))'
+        rank = re.findall(pattern, page)
+        return ' '.join([rank[0][0], rank[1][0]]) if rank else "Unranked"
     
     def print_info(self):
         inventory_data = self.get_inventory()

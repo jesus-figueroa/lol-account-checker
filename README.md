@@ -18,6 +18,7 @@ NEW: Added concurrency for faster account checking.
 ## Usage
 
 Install python 3.2 or higher
+
 Install requests
 
 ```

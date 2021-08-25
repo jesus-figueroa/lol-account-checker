@@ -1,5 +1,6 @@
 # League Of Legends Account Checker
 Retrieve information about a league of legends account. Region independent, it will return the following values:
+NEW: Added concurrency for faster account checking.
 
 * Region
 * Name
@@ -9,11 +10,13 @@ Retrieve information about a league of legends account. Region independent, it w
 * Rank & LP
 * IP & RP
 * Refundable IP & RP
+* Ban Status
 * Champions
 * Skins
 
 ## Usage
 
+Install python 3.2 or higher
 Install requests
 
 ```
@@ -26,6 +29,4 @@ Open the **lolchecker.py** and place your account(s) in the **ACCOUNTS** variabl
 ACCOUNTS = "user:pass,user1:pass1"
 ```
 
-Afterwards, run the **lolchecker.py** like any normal python.
-
-Original code by [guitar-toucher](https://github.com/guitar-toucher).
+Afterwards, run the **lolchecker.py** like any normal python script.

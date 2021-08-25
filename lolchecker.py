@@ -1,17 +1,19 @@
 import datetime
 import requests
-import json
+import concurrent.futures
 import re
+import time
 
 '''
 Paste you accounts below separated by commas
 '''
-ACCOUNTS = "user:pass"
+ACCOUNTS = "user:pass, user1:pass1,user2:pass2"
+
 
 class AccountChecker:
     AUTH_URL = "https://auth.riotgames.com/api/v1/authorization"
     INFO_URL = "https://auth.riotgames.com/userinfo"
-    CHAMPION_DATA_URL = "http://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champions/"
+    CHAMPION_DATA_URL = "https://cdn.communitydragon.org/latest/champion/"
     INVENTORY_TYPES = [
         'TOURNAMENT_TROPHY', 'TOURNAMENT_FLAG', 'TOURNAMENT_FRAME', 
         'TOURNAMENT_LOGO', 'GEAR', 'SKIN_UPGRADE_RECALL', 
@@ -35,7 +37,7 @@ class AccountChecker:
             "scope":"openid link ban lol_region",
         }
 
-        auth_response = self.session.post(
+        self.session.post(
                 url=self.AUTH_URL,
                 json=auth_data
             )
@@ -58,11 +60,15 @@ class AccountChecker:
         # "http://local/redirect#access_token=...
         # &scope=...&id_token=...&token_type=
         # &expires_in=...
-        uri = response['response']['parameters']['uri']
-        infos = uri.split('=')
-        infos = [x.split('&')[0] for x in infos]
-        self.access_token = infos[1]
-        self.id_token = infos[3]
+        try:
+            uri = response['response']['parameters']['uri']
+            infos = uri.split('=')
+            infos = [x.split('&')[0] for x in infos]
+            self.access_token = infos[1]
+            self.id_token = infos[3]
+        except:
+            print(f"Authorization error on {self.username}")
+            print(response)
     
     def _get_user_info(self):
         auth = {"Authorization": f"Bearer {self.access_token}"}
@@ -71,15 +77,18 @@ class AccountChecker:
         response = self.session.post(url=self.INFO_URL)
         self.user_info = response.json()
 
+        self.region_id = self.user_info['region']['id']
+        self.region_tag = self.user_info['region']['tag']
+
         return response.json()['ban']['code'] == ''
     
     def get_inventory(self, types=INVENTORY_TYPES):
-        invt_url = f"https://{self.user_info['region']['id']}.cap.riotgames.com/lolinventoryservice/v2/inventories/simple?"
-        detail_invt_url = f"https://{self.user_info['region']['id']}.cap.riotgames.com/lolinventoryservice/v2/inventoriesWithLoyalty?"
+        invt_url = f"https://{self.region_id}.cap.riotgames.com/lolinventoryservice/v2/inventories/simple?"
+        #detail_invt_url = f"https://{self.region_id}.cap.riotgames.com/lolinventoryservice/v2/inventoriesWithLoyalty?"
 
         query = {
             "puuid": self.user_info['sub'],
-            "location": f"lolriot.pdx2.{self.user_info['region']['id']}",
+            "location": f"lolriot.pdx2.{self.region_id}",
             "accountId": self.user_info['lol']['cuid'],
         }
         query_string = [f"{k}={v}" for k, v in query.items()]
@@ -92,15 +101,37 @@ class AccountChecker:
         self.session.headers.update(auth)
 
         response = self.session.get(url=URL)
-        result = response.json()['data']['items']
 
+        try:
+            result = response.json()['data']['items']
+        except:
+            print(f"Failed to get inventory data on {self.username}")
+            print(response)
+            return
+        
         champion_names = []
         champion_skins = []
+        champion_urls = [self.CHAMPION_DATA_URL + str(champion_id) + "/data" for champion_id in result['CHAMPION']]
 
-        for champion_id in result['CHAMPION']:
-            champion_data = requests.get(self.CHAMPION_DATA_URL + str(champion_id) + '.json').json()
-            champion_skins.extend([skin['name'] for skin in champion_data['skins'] if skin['id'] in result['CHAMPION_SKIN']])
-            champion_names.append(champion_data['name'])
+        def load_url(url):
+            champion_data = requests.get(url)
+            return champion_data
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_url = (executor.submit(load_url, url) for url in champion_urls)
+            
+            for future in concurrent.futures.as_completed(future_to_url):
+                try:
+                    data = future.result().json()
+                    champion_skins.extend([skin['name'] for skin in data['skins'] if skin['id'] in result['CHAMPION_SKIN']])
+                    champion_names.append(data['name'])
+                except:
+                    print("Champion/skin conversion failed for 1 champion")
+
+        #for champion_id in result['CHAMPION']:
+        #    champion_data = requests.get(self.CHAMPION_DATA_URL + str(champion_id) + '.json').json()
+        #    champion_skins.extend([skin['name'] for skin in champion_data['skins'] if skin['id'] in result['CHAMPION_SKIN']])
+        #    champion_names.append(champion_data['name'])
         
         result['CHAMPION'] = champion_names
         result['CHAMPION_SKIN'] = champion_skins
@@ -157,7 +188,7 @@ class AccountChecker:
         return (self._date_readable(response.json()))
     
     def get_rank(self):
-        rank_url = f"https://lolprofile.net/index.php?page=summoner&ajaxr=1&region={self.user_info['region']['tag']}&name={self.user_info['lol_account']['summoner_name']}"
+        rank_url = f"https://lolprofile.net/index.php?page=summoner&ajaxr=1&region={self.region_tag}&name={self.user_info['lol_account']['summoner_name']}"
         page = requests.get(rank_url).text
         pattern = '((?<="tier">)(.*?)(?=<)|(?<="lp">)(.*?)(?=<))'
         rank = re.findall(pattern, page)
@@ -167,7 +198,8 @@ class AccountChecker:
         inventory_data = self.get_inventory()
         ip_value = self.refundable_IP()
         rp_value = self.refundable_RP()
-        region = self.user_info['region']['tag'].upper()
+        region = self.region_tag.upper()
+        ban_status = f"True ({self.user_info['ban']['code']})" if self.user_info['ban']['code'] else "False"
         name  = self.user_info['lol_account']['summoner_name']
         level = self.user_info['lol_account']['summoner_level']
         balance = self.get_balance()
@@ -177,20 +209,42 @@ class AccountChecker:
         rp_curr = balance['rp']
         ip_curr = balance['ip']
         rank = self.get_rank()
-        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", "\n", "\n", f"Champions ({len(inventory_data['CHAMPION'])}): {champions}", "\n", "\n", f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}"]
+        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", f"Banned: {ban_status}", "\n", "\n", f"Champions ({len(inventory_data['CHAMPION'])}): {champions}", "\n", "\n", f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}"]
         return ' | '.join(ret_str)
 
-    def _date_readable(self, variable):    
-        timeCreation = variable['games']['games'][0]['gameCreation']
+    def _date_readable(self, variable):
+        try:
+            timeCreation = variable['games']['games'][0]['gameCreation']
         
-        dateTime = datetime.datetime.fromtimestamp(
-            int(timeCreation /1000)
-        ).strftime('%Y-%m-%d %H:%M:%S')
+            dateTime = datetime.datetime.fromtimestamp(
+                int(timeCreation /1000)
+            ).strftime('%Y-%m-%d %H:%M:%S')
         
-        return dateTime
+            return dateTime
+        except:
+            return "No previous games"
 
 account_list = [i for i in ACCOUNTS.replace(" ", "").split(",")]
-for account in account_list:
+
+# for account in account_list:
+#     user, pw = account.split(":")
+#     account_checker = AccountChecker(user, pw)
+#     print(account_checker.print_info())
+
+def load_account(account):
     user, pw = account.split(":")
     account_checker = AccountChecker(user, pw)
-    print(account_checker.print_info())
+    return account_checker
+
+time1 = time.time()
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    future_to_acc = (executor.submit(load_account, acc) for acc in account_list)
+    
+    for future in concurrent.futures.as_completed(future_to_acc):
+        try:
+            data = future.result()
+            print(data.print_info())
+        except Exception as exc:
+            print("Failed to retrieve account.")
+time2 = time.time()
+print(f'Took {time2-time1:.2f} s')

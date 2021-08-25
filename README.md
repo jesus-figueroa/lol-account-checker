@@ -1,5 +1,6 @@
 # League Of Legends Account Checker
 Retrieve information about a league of legends account. Region independent, it will return the following values:
+
 NEW: Added concurrency for faster account checking.
 
 * Region

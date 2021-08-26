@@ -243,7 +243,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     for future in concurrent.futures.as_completed(future_to_acc):
         try:
             data = future.result()
-            with open(f"accounts-{str(time1)}.txt", 'a') as account_writer:
+            with open(f"accounts-{str(time1)}.txt", 'a', encoding="utf-8") as account_writer:
                 account_writer.write(data.print_info())
         except Exception as exc:
             print("Failed to retrieve account.")

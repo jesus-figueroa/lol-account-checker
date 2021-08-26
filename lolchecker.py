@@ -1,8 +1,5 @@
-import datetime
-import requests
-import concurrent.futures
-import re
-import time
+from datetime import datetime
+import requests, concurrent.futures, re, time
 
 '''
 Paste you accounts below separated by commas
@@ -127,11 +124,6 @@ class AccountChecker:
                     champion_names.append(data['name'])
                 except:
                     print("Champion/skin conversion failed for 1 champion")
-
-        #for champion_id in result['CHAMPION']:
-        #    champion_data = requests.get(self.CHAMPION_DATA_URL + str(champion_id) + '.json').json()
-        #    champion_skins.extend([skin['name'] for skin in champion_data['skins'] if skin['id'] in result['CHAMPION_SKIN']])
-        #    champion_names.append(champion_data['name'])
         
         result['CHAMPION'] = champion_names
         result['CHAMPION_SKIN'] = champion_skins
@@ -209,7 +201,7 @@ class AccountChecker:
         rp_curr = balance['rp']
         ip_curr = balance['ip']
         rank = self.get_rank()
-        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", f"Banned: {ban_status}", "\n", "\n", f"Champions ({len(inventory_data['CHAMPION'])}): {champions}", "\n", "\n", f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}"]
+        ret_str = [f" | Region: {region}", f"Name: {name}", f"Login: {self.username}:{self.password}", f"Last Game: {last_game}", f"Level: {level}", f"Rank: {rank}", f"IP: {ip_curr} - Refundable {ip_value}", f"RP: {rp_curr} - Refundable {rp_value}", f"Banned: {ban_status}", "\n", "\n", f"Champions ({len(inventory_data['CHAMPION'])}): {champions}", "\n", "\n", f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}", "\n", "\n", "\n"]
         return ' | '.join(ret_str)
 
     def _date_readable(self, variable):
@@ -226,11 +218,6 @@ class AccountChecker:
 
 account_list = [i for i in ACCOUNTS.replace(" ", "").split(",")]
 
-# for account in account_list:
-#     user, pw = account.split(":")
-#     account_checker = AccountChecker(user, pw)
-#     print(account_checker.print_info())
-
 def load_account(account):
     user, pw = account.split(":")
     account_checker = AccountChecker(user, pw)
@@ -239,11 +226,11 @@ def load_account(account):
 time1 = time.time()
 with concurrent.futures.ThreadPoolExecutor() as executor:
     future_to_acc = (executor.submit(load_account, acc) for acc in account_list)
-    
     for future in concurrent.futures.as_completed(future_to_acc):
         try:
             data = future.result()
-            print(data.print_info())
+            with open(f"accounts-{str(time1)}.txt", 'a') as account_writer:
+                account_writer.write(data.print_info())
         except Exception as exc:
             print("Failed to retrieve account.")
 time2 = time.time()

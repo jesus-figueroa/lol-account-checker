@@ -1,6 +1,8 @@
 # League Of Legends Account Checker
 Retrieve information about a league of legends account. Region independent, it will return the following values:
 
+Accounts will be in a file named "accounts-1234567.12345.txt", created where the script is ran.
+
 NEW: Added concurrency for faster account checking.
 
 * Region

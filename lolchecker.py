@@ -83,9 +83,22 @@ class AccountChecker:
         invt_url = f"https://{self.region_id}.cap.riotgames.com/lolinventoryservice/v2/inventories/simple?"
         #detail_invt_url = f"https://{self.region_id}.cap.riotgames.com/lolinventoryservice/v2/inventoriesWithLoyalty?"
 
+        LOCATION_PARAMETERS = {
+            "BR1": "lolriot.mia1.br1",
+            "EUN1": "lolriot.euc1.eun1",
+            "EUW1": "lolriot.ams1.euw1",
+            "JP1": "lolriot.nrt1.jp1",
+            "LA1": "lolriot.mia1.la1",
+            "LA2": "lolriot.mia1.la2",
+            "NA1": "lolriot.pdx2.na1",
+            "OC1": "lolriot.pdx1.oc1",
+            "RU": "lolriot.euc1.ru",
+            "TR1": "lolriot.euc1.tr1"
+        }
+
         query = {
             "puuid": self.user_info['sub'],
-            "location": f"lolriot.pdx2.{self.region_id}",
+            "location": LOCATION_PARAMETERS[self.region_id],
             "accountId": self.user_info['lol']['cuid'],
         }
         query_string = [f"{k}={v}" for k, v in query.items()]

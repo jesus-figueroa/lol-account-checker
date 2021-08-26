@@ -224,6 +224,7 @@ def load_account(account):
     return account_checker
 
 time1 = time.time()
+print(f"Checking accounts, please wait...")
 with concurrent.futures.ThreadPoolExecutor() as executor:
     future_to_acc = (executor.submit(load_account, acc) for acc in account_list)
     for future in concurrent.futures.as_completed(future_to_acc):
@@ -234,4 +235,5 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         except Exception as exc:
             print("Failed to retrieve account.")
 time2 = time.time()
+print(f"Complete! Account information located in accounts-{str(time1)}.txt")
 print(f'Took {time2-time1:.2f} s')

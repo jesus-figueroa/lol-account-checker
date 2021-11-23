@@ -3,7 +3,7 @@ Retrieve information about a league of legends account. Region independent, it w
 
 Accounts will be in a file named "accounts-1234567.12345.txt", created where the script is ran.
 
-NEW: Added concurrency for faster account checking.
+NEW: Added concurrency for faster account checking. Timeout to reduce rate limiting. Changed rank endpoint for faster checking. Caching for champion data.
 
 * Region
 * Name

@@ -7,7 +7,7 @@ import requests, os, concurrent.futures, json, time, traceback
 ACCOUNTS = "user:pass, user1:pass1,user2:pass2"
 
 #
-# Timeout between each account check
+# Timeout between each account check (in seconds)
 # Set to 0 for no timeout (May cause temporary rate limiting)
 #
 TIMEOUT = 5

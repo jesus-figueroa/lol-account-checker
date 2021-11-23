@@ -13,6 +13,7 @@ NEW: Added concurrency for faster account checking. Timeout to reduce rate limit
 * Rank & LP
 * IP & RP
 * Refundable IP & RP
+* Refunds
 * Ban Status
 * Champions
 * Skins

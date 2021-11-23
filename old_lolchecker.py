@@ -6,7 +6,7 @@ import time
 '''
 Paste you accounts below separated by commas
 '''
-ACCOUNTS = "user:pass"
+ACCOUNTS = "user:pass "
 class AccountChecker:
     AUTH_URL = "https://auth.riotgames.com/api/v1/authorization"
     INFO_URL = "https://auth.riotgames.com/userinfo"

@@ -30,7 +30,16 @@ pip install requests
 Open the **lolchecker.py** and place your account(s) in the **ACCOUNTS** variable like below (seperate with commas for multiple accounts):
 
 ```
-ACCOUNTS = "user:pass,user1:pass1"
+#
+# Paste you accounts below separated by commas
+#
+ACCOUNTS = "user:pass, user1:pass1,user2:pass2"
+
+#
+# Timeout between each account check
+# Set to 0 for no timeout (May cause temporary rate limiting)
+#
+TIMEOUT = 5
 ```
 
 Afterwards, run the **lolchecker.py** like any normal python script.

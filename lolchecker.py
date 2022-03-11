@@ -145,10 +145,17 @@ class AccountChecker:
         self.access_token = tokens[1]
         self.id_token = tokens[3]
 
-        auth = {"Authorization": f"Bearer {self.access_token}"}
+        auth = {
+            'Accept-Encoding': 'deflate, gzip',
+            'user-agent': 'RiotClient/44.0.1.4223069.4190634 lol-inventory (Windows;10;;Professional, x64)',
+            'Accept': 'application/json',
+            "Authorization": f"Bearer {self.access_token}"
+        }
+
         self.session.headers.update(auth)
 
         self.user_info = self._get_user_info()
+
         self.region_id = self.user_info["region"]["id"]
         self.region_tag = self.user_info["region"]["tag"]
         self.summoner_name = self.user_info["lol_account"]["summoner_name"]
@@ -156,22 +163,31 @@ class AccountChecker:
         self.purchase_history = self.get_purchase_history()
 
     def _authorize(self):
+        headers = {
+            'user-agent': 'RiotClient/44.0.1.4223069.4190634 rso-auth (Windows;10;;Professional, x64)', 
+            'Accept': 'application/json'
+        }
+
         auth_data = {
             "client_id": "riot-client",
             "nonce": "1",
             "redirect_uri": "http://localhost/redirect",
             "response_type": "token id_token",
-            "scope": "openid link ban lol_region",
+            'scope': 'openid offline_access lol ban profile email phone'
         }
+        
         login_data = {
-            "type": "auth",
-            "username": self.username,
+            "language": "en_US",
             "password": self.password,
+            "remember": "true",
+            'type': 'auth',
+            "username": self.username,
         }
 
-        self.session.post(url=Constants.AUTH_URL, json=auth_data)
+        self.session.post(url=Constants.AUTH_URL, headers=headers, json=auth_data)
 
-        response = self.session.put(url=Constants.AUTH_URL, json=login_data).json()
+        response = self.session.put(url=Constants.AUTH_URL, headers=headers, json=login_data).json()
+        
         # print (response, '-=-=-')
         # uri format
         # "http://local/redirect#access_token=...
@@ -197,7 +213,7 @@ class AccountChecker:
         query = {
             "puuid": self.user_info["sub"],
             "location": Constants.LOCATION_PARAMETERS[self.region_id],
-            "accountId": self.user_info["lol"]["cuid"],
+            "accountId": self.user_info["pvpnet_account_id"],
         }
         query_string = "&".join([f"{k}={v}" for k, v in query.items()] + [f"inventoryTypes={t}" for t in types])
 
@@ -207,7 +223,7 @@ class AccountChecker:
             result = response.json()["data"]["items"]
         except:
             print(f"Failed to get inventory data on {self.username}")
-            print(f"Response: {response}")
+            print(f"Response: {response.json()}")
             return {"CHAMPION": [], "CHAMPION_SKINS": []}
 
         result["CHAMPION"] = [champion_data["champions"][str(id)] for id in result["CHAMPION"]]
@@ -243,6 +259,7 @@ class AccountChecker:
 
     def last_play(self):
         response = self.session.get(Constants.MATCHS_URL).json()
+
         if len(response["games"]["games"]) != 0:
             timeCreation = response["games"]["games"][0]["gameCreation"]
 
@@ -256,6 +273,7 @@ class AccountChecker:
         response = requests.get(
             Constants.RANK_URL.format(region_id=self.region_id, summoner_name=self.summoner_name)
         ).json()
+        
         try:
             rank = response["data"]["leagueProfile"]["latestRanks"]
         except:
@@ -329,11 +347,8 @@ print(f"Took {time2-time1:.2f} s")
 time1 = time.time()
 print(f"Checking accounts, please wait...")
 for account in account_list:
-    if TIMEOUT > 0:
-        print(f"Waiting {TIMEOUT} seconds before checking account...")
-        time.sleep(TIMEOUT)
-    (username, password) = account.split(":")
     try:
+        (username, password) = account.split(":")
         # To use a proxy, may not work
         # account_checker = AccountChecker(username, password, {"https": "https://PROXY:PORT"})
         account_checker = AccountChecker(username, password)
@@ -342,6 +357,9 @@ for account in account_list:
     except:
         print(f"Error occured while checking {username}")
         print(traceback.format_exc())
+    if TIMEOUT > 0:
+        print(f"Waiting {TIMEOUT} seconds before checking account...")
+        time.sleep(TIMEOUT)
 
 time2 = time.time()
 print(f"Complete! Account information located in accounts-{str(time1)}.txt")

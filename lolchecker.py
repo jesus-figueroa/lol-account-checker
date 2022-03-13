@@ -18,12 +18,15 @@ class Constants:
     INFO_URL = "https://auth.riotgames.com/userinfo"
     INVENTORY_URL = "https://{region_id}.cap.riotgames.com/lolinventoryservice/v2/inventories/simple?"
     DETAILED_INVENTORY_URL = "https://{region_id}.cap.riotgames.com/lolinventoryservice/v2/inventoriesWithLoyalty?"
-    STORE_URL = "https://{region_tag}.store.leagueoflegends.com/storefront/v3/view/misc?language=en_US"
-    HISTORY_URL = "https://{region_tag}.store.leagueoflegends.com/storefront/v3/history/purchase"
-    MATCHS_URL = "https://acs.leagueoflegends.com/v1/stats/player_history/auth?begIndex=0&endIndex=1"
+    STORE_URL = "https://{store_front_id}.store.leagueoflegends.com/storefront/v3/view/misc?language=en_US"
+    HISTORY_URL = "https://{store_front_id}.store.leagueoflegends.com/storefront/v3/history/purchase"
+    MATCHES_URL = "https://acs.leagueoflegends.com/v1/stats/player_history/auth?begIndex=0&endIndex=1"
 
     # bl1tzgg rank checking endpoint
-    RANK_URL = "https://riot.iesdev.com/graphql?query=query%20LeagueProfile%28%24summoner_name%3AString%2C%24summoner_id%3AString%2C%24account_id%3AString%2C%24region%3ARegion%21%2C%24puuid%3AString%29%7BleagueProfile%28summoner_name%3A%24summoner_name%2Csummoner_id%3A%24summoner_id%2Caccount_id%3A%24account_id%2Cregion%3A%24region%2Cpuuid%3A%24puuid%29%7BlatestRanks%7Bqueue%20tier%20rank%20leaguePoints%7D%7D%7D&variables=%7B%22summoner_name%22%3A%22{summoner_name}%22%2C%22region%22%3A%22{region_id}%22%7D"
+    RANK_URL = "https://riot.iesdev.com/graphql?query=query%20LeagueProfile%28%24summoner_name%3AString%2C%24summoner_id%3AString%2C%24account_id%3AString%2C%24region%3ARegion%21%2C%24puuid%3AString%29%7BleagueProfile%28summoner_name%3A%24summoner_name%2Csummoner_id%3A%24summoner_id%2Caccount_id%3A%24account_id%2Cregion%3A%24region%2Cpuuid%3A%24puuid%29%7BaccountId%20latestRanks%7Bqueue%20tier%20rank%20leaguePoints%7D%7D%7D&variables=%7B%22summoner_name%22%3A%22{summoner_name}%22%2C%22region%22%3A%22{region_id}%22%7D"
+
+    # bl1tzgg matches checking endpoint
+    NEW_MATCHES_URL = "https://league-player.iesdev.com/graphql?query=query%20matches%28%0A%20%20%24region%3A%20Region%21%0A%20%20%24accountId%3A%20String%21%0A%20%20%24first%3A%20Int%0A%20%20%24role%3A%20Role%0A%20%20%24queue%3A%20Queue%0A%20%20%24championId%3A%20Int%0A%20%20%24riotSeasonId%3A%20Int%0A%20%20%24maxMatchAge%3A%20Int%0A%29%20%7B%0A%20%20matches%28%0A%20%20%20%20region%3A%20%24region%0A%20%20%20%20accountId%3A%20%24accountId%0A%20%20%20%20first%3A%20%24first%0A%20%20%20%20role%3A%20%24role%0A%20%20%20%20queue%3A%20%24queue%0A%20%20%20%20championId%3A%20%24championId%0A%20%20%20%20riotSeasonId%3A%20%24riotSeasonId%0A%20%20%20%20maxMatchAge%3A%20%24maxMatchAge%0A%20%20%29%20%7B%0A%20%20%20%20id%0A%20%20%20%20gameCreation%0A%20%20%7D%0A%7D&variables=%7B%22maxMatchAge%22%3A300%2C%22first%22%3A1%2C%22region%22%3A%22{region_id}%22%2C%22accountId%22%3A%22{account_id}%22%7D"
 
     CHAMPION_DATA_URL = "https://cdn.communitydragon.org/latest/champion/"
     CHAMPION_IDS_URL = "http://ddragon.leagueoflegends.com/cdn/{game_version}/data/en_US/champion.json"
@@ -56,6 +59,7 @@ class Constants:
         "WARD_SKIN",
         "AUGMENT_SLOT",
     ]
+
     LOCATION_PARAMETERS = {
         "BR1": "lolriot.mia1.br1",
         "EUN1": "lolriot.euc1.eun1",
@@ -67,6 +71,19 @@ class Constants:
         "OC1": "lolriot.pdx1.oc1",
         "RU": "lolriot.euc1.ru",
         "TR1": "lolriot.euc1.tr1",
+    }
+
+    STORE_FRONTS = {
+        "BR1": "br",
+        "EUN1": "eun",
+        "EUW1": "euw",
+        "JP1": "jp",
+        "LA1": "la1",
+        "LA2": "la2",
+        "NA1": "na",
+        "OC1": "oc",
+        "RU": "ru",
+        "TR1": "tr",
     }
 
 
@@ -146,10 +163,10 @@ class AccountChecker:
         self.id_token = tokens[3]
 
         auth = {
-            'Accept-Encoding': 'deflate, gzip',
-            'user-agent': 'RiotClient/44.0.1.4223069.4190634 lol-inventory (Windows;10;;Professional, x64)',
-            'Accept': 'application/json',
-            "Authorization": f"Bearer {self.access_token}"
+            "Accept-Encoding": "deflate, gzip",
+            "user-agent": "RiotClient/44.0.1.4223069.4190634 lol-inventory (Windows;10;;Professional, x64)",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.access_token}",
         }
 
         self.session.headers.update(auth)
@@ -164,8 +181,8 @@ class AccountChecker:
 
     def _authorize(self):
         headers = {
-            'user-agent': 'RiotClient/44.0.1.4223069.4190634 rso-auth (Windows;10;;Professional, x64)', 
-            'Accept': 'application/json'
+            "user-agent": "RiotClient/44.0.1.4223069.4190634 rso-auth (Windows;10;;Professional, x64)",
+            "Accept": "application/json",
         }
 
         auth_data = {
@@ -173,21 +190,21 @@ class AccountChecker:
             "nonce": "1",
             "redirect_uri": "http://localhost/redirect",
             "response_type": "token id_token",
-            'scope': 'openid offline_access lol ban profile email phone'
+            "scope": "openid offline_access lol ban profile email phone",
         }
-        
+
         login_data = {
             "language": "en_US",
             "password": self.password,
             "remember": "true",
-            'type': 'auth',
+            "type": "auth",
             "username": self.username,
         }
 
         self.session.post(url=Constants.AUTH_URL, headers=headers, json=auth_data)
 
         response = self.session.put(url=Constants.AUTH_URL, headers=headers, json=login_data).json()
-        
+
         # print (response, '-=-=-')
         # uri format
         # "http://local/redirect#access_token=...
@@ -232,11 +249,15 @@ class AccountChecker:
         return result
 
     def get_balance(self):
-        response = self.session.get(Constants.STORE_URL.format(region_tag=self.region_tag)).json()
+        response = self.session.get(
+            Constants.STORE_URL.format(store_front_id=Constants.STORE_FRONTS[self.region_id])
+        ).json()
         return response["player"]
 
     def get_purchase_history(self):
-        response = self.session.get(Constants.HISTORY_URL.format(region_tag=self.region_tag)).json()
+        response = self.session.get(
+            Constants.HISTORY_URL.format(store_front_id=Constants.STORE_FRONTS[self.region_id])
+        ).json()
         return response
 
     def refundable_RP(self):
@@ -258,24 +279,26 @@ class AccountChecker:
         return result
 
     def last_play(self):
-        response = self.session.get(Constants.MATCHS_URL).json()
+        response = self.session.get(
+            Constants.NEW_MATCHES_URL.format(region_id=self.region_id, account_id=self.account_id)
+        ).json()
 
-        if len(response["games"]["games"]) != 0:
-            timeCreation = response["games"]["games"][0]["gameCreation"]
-
-            dateTime = datetime.fromtimestamp(int(timeCreation / 1000)).strftime("%Y-%m-%d %H:%M:%S")
-
-            return dateTime
-        else:
-            return "No previous games"
+        try:
+            recent_match_date = list(response["data"]["matches"])[0]["gameCreation"]
+            return datetime.strptime(recent_match_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+        except:
+            print(f"Failed getting recent match of {self.username}")
+            print(f"Response: {response}")
+            return "Unknown"
 
     def get_rank(self):
         response = requests.get(
             Constants.RANK_URL.format(region_id=self.region_id, summoner_name=self.summoner_name)
         ).json()
-        
+
         try:
             rank = response["data"]["leagueProfile"]["latestRanks"]
+            self.account_id = response["data"]["leagueProfile"]["accountId"]
         except:
             print(f"Failed getting rank of {self.username}")
             print(f"Response: {response}")
@@ -289,6 +312,7 @@ class AccountChecker:
 
     def print_info(self):
         inventory_data = self.get_inventory()
+        rank = self.get_rank()
         ip_value = self.refundable_IP()
         rp_value = self.refundable_RP()
         refunds = self.purchase_history["refundCreditsRemaining"]
@@ -302,7 +326,6 @@ class AccountChecker:
         champion_skins = ", ".join(inventory_data["CHAMPION_SKIN"])
         rp_curr = balance["rp"]
         ip_curr = balance["ip"]
-        rank = self.get_rank()
         ret_str = [
             f" | Region: {region}",
             f"Name: {name}",
@@ -345,6 +368,7 @@ time2 = time.time()
 print(f"Took {time2-time1:.2f} s")
 
 time1 = time.time()
+formated_time = datetime.fromtimestamp(time1).strftime("%Y-%m-%d_%H-%M-%S")
 print(f"Checking accounts, please wait...")
 for account in account_list:
     try:
@@ -352,7 +376,7 @@ for account in account_list:
         # To use a proxy, may not work
         # account_checker = AccountChecker(username, password, {"https": "https://PROXY:PORT"})
         account_checker = AccountChecker(username, password)
-        with open(f"accounts-{str(time1)}.txt", "a", encoding="utf-8") as account_writer:
+        with open(f"accounts {str(formated_time)}.txt", "a", encoding="utf-8") as account_writer:
             account_writer.write(account_checker.print_info())
     except:
         print(f"Error occured while checking {username}")
@@ -362,5 +386,5 @@ for account in account_list:
         time.sleep(TIMEOUT)
 
 time2 = time.time()
-print(f"Complete! Account information located in accounts-{str(time1)}.txt")
+print(f"Complete! Account information located in accounts-{str(formated_time)}.txt")
 print(f"Took {time2-time1:.2f} s")

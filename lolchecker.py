@@ -310,6 +310,14 @@ class AccountChecker:
                     return f'{queue["tier"]} {queue["rank"]} {queue["leaguePoints"]} LP'
         return "Unranked"
 
+    def get_ban(self):
+        try:
+            if int(time.time() * 1000) < int(self.user_info["ban"]["exp"]):
+                return f"True ({self.user_info['ban']['code']})"
+            return "False"
+        except:
+            return "False"
+
     def print_info(self):
         inventory_data = self.get_inventory()
         rank = self.get_rank()
@@ -317,7 +325,7 @@ class AccountChecker:
         rp_value = self.refundable_RP()
         refunds = self.purchase_history["refundCreditsRemaining"]
         region = self.region_tag.upper()
-        ban_status = f"True ({self.user_info['ban']['code']})" if self.user_info["ban"]["code"] else "False"
+        ban_status = self.get_ban()
         name = self.summoner_name
         level = self.user_info["lol_account"]["summoner_level"]
         balance = self.get_balance()

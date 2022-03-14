@@ -123,8 +123,9 @@ class ChampionData:
 
     def get_champion_data(self):
         CHAMPION_FILE_PATH = f"data{os.path.sep}champion_data.json"
+        FOLDER_PATH = f"data{os.path.sep}"
 
-        if not os.path.exists(CHAMPION_FILE_PATH):
+        if not os.path.exists(FOLDER_PATH):
             os.makedirs(os.path.dirname(CHAMPION_FILE_PATH))
 
         if not os.path.exists(CHAMPION_FILE_PATH):

@@ -14,6 +14,8 @@ if not os.path.exists(rf"checker.env"):
     with open(r"checker.env", "w") as f:
         f.write(f"ACCOUNTS={ACCOUNTS}\n")
         f.write(f"TIMEOUT={TIMEOUT}")
+    print("Please input accounts and timeout in the new checker.env file")
+    exit()
 
 with open(rf"checker.env", "r") as f:
     ENV_DICT = dict(

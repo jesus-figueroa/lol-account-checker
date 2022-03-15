@@ -7,16 +7,25 @@ import requests, os, concurrent.futures, json, time, traceback
 ACCOUNTS = "user:pass, user1:pass1,user2:pass2"
 TIMEOUT = 5
 
-if os.path.exists(rf"checker.env"):
-    with open(rf"checker.env", "r") as f:
-        ENV_DICT = dict(
-            tuple(line.replace("\n", "").split("="))
-            for line in f.readlines()
-            if not line.startswith("#") or not line.strip()
-        )
+# Check if checker.env exists
+# If checker.env exists, load the accounts and timeout from it
+# If checker.env does not exist, create file and load the default values
+if not os.path.exists(rf"checker.env"):
+    with open(r"checker.env", "w") as f:
+        f.write(f"ACCOUNTS={ACCOUNTS}\n")
+        f.write(f"TIMEOUT={TIMEOUT}")
+    print("Please input accounts and timeout in the new checker.env file")
+    exit()
 
-        ACCOUNTS = ENV_DICT["ACCOUNTS"]
-        TIMEOUT = int(ENV_DICT["TIMEOUT"])
+with open(rf"checker.env", "r") as f:
+    ENV_DICT = dict(
+        tuple(line.replace("\n", "").split("="))
+        for line in f.readlines()
+        if not line.startswith("#") or not line.strip()
+    )
+
+    ACCOUNTS = ENV_DICT["ACCOUNTS"]
+    TIMEOUT = int(ENV_DICT["TIMEOUT"])
 
 
 class Constants:
@@ -138,8 +147,8 @@ class ChampionData:
         return champion_data_builder
 
     def get_champion_data(self):
-        CHAMPION_FILE_PATH = rf"data{os.path.sep}champion_data.json"
-        FOLDER_PATH = rf"data{os.path.sep}"
+        CHAMPION_FILE_PATH = r"data/champion_data.json"
+        FOLDER_PATH = r"data/"
 
         if not os.path.exists(FOLDER_PATH):
             os.makedirs(os.path.dirname(CHAMPION_FILE_PATH))
@@ -424,7 +433,7 @@ time1 = time.time()
 formated_time = datetime.fromtimestamp(time1).strftime("%Y-%m-%d_%H-%M-%S")
 print(f"Checking accounts, please wait...")
 
-ACCOUNTS_FOLDER_PATH = rf"output{os.path.sep}"
+ACCOUNTS_FOLDER_PATH = r"output/"
 
 if not os.path.exists(ACCOUNTS_FOLDER_PATH):
     os.makedirs(os.path.dirname(ACCOUNTS_FOLDER_PATH))

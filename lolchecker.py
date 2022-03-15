@@ -2,15 +2,21 @@ from datetime import datetime
 import requests, os, concurrent.futures, json, time, traceback
 
 #
-# Paste you accounts below separated by commas
+# Please rename checker.env.example to checker.env and place information their instead
 #
 ACCOUNTS = "user:pass, user1:pass1,user2:pass2"
-
-#
-# Timeout between each account check (in seconds)
-# Set to 0 for no timeout (May cause temporary rate limiting)
-#
 TIMEOUT = 5
+
+if os.path.exists(rf"checker.env"):
+    with open(rf"checker.env", "r") as f:
+        ENV_DICT = dict(
+            tuple(line.replace("\n", "").split("="))
+            for line in f.readlines()
+            if not line.startswith("#")
+        )
+
+        ACCOUNTS = ENV_DICT["ACCOUNTS"]
+        TIMEOUT = ENV_DICT["TIMEOUT"]
 
 
 class Constants:
@@ -29,7 +35,10 @@ class Constants:
     NEW_MATCHES_URL = "https://league-player.iesdev.com/graphql?query=query%20matches%28%0A%20%20%24region%3A%20Region%21%0A%20%20%24accountId%3A%20String%21%0A%20%20%24first%3A%20Int%0A%20%20%24role%3A%20Role%0A%20%20%24queue%3A%20Queue%0A%20%20%24championId%3A%20Int%0A%20%20%24riotSeasonId%3A%20Int%0A%20%20%24maxMatchAge%3A%20Int%0A%29%20%7B%0A%20%20matches%28%0A%20%20%20%20region%3A%20%24region%0A%20%20%20%20accountId%3A%20%24accountId%0A%20%20%20%20first%3A%20%24first%0A%20%20%20%20role%3A%20%24role%0A%20%20%20%20queue%3A%20%24queue%0A%20%20%20%20championId%3A%20%24championId%0A%20%20%20%20riotSeasonId%3A%20%24riotSeasonId%0A%20%20%20%20maxMatchAge%3A%20%24maxMatchAge%0A%20%20%29%20%7B%0A%20%20%20%20id%0A%20%20%20%20gameCreation%0A%20%20%7D%0A%7D&variables=%7B%22maxMatchAge%22%3A300%2C%22first%22%3A1%2C%22region%22%3A%22{region_id}%22%2C%22accountId%22%3A%22{account_id}%22%7D"
 
     CHAMPION_DATA_URL = "https://cdn.communitydragon.org/latest/champion/"
-    CHAMPION_IDS_URL = "http://ddragon.leagueoflegends.com/cdn/{game_version}/data/en_US/champion.json"
+    CHAMPION_IDS_URL = (
+        "http://ddragon.leagueoflegends.com/cdn/{game_version}/data/en_US/champion.json"
+    )
+
     VERSION_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
 
     INVENTORY_TYPES = [
@@ -93,9 +102,14 @@ class ChampionData:
         self.game_version = game_version[0]
 
     def build_champion_data(self):
-        champion_ids = requests.get(Constants.CHAMPION_IDS_URL.format(game_version=self.game_version)).json()
+        champion_ids = requests.get(
+            Constants.CHAMPION_IDS_URL.format(game_version=self.game_version)
+        ).json()
         champion_data_builder = {
-            "champions": {int(value["key"]): champion_name for (champion_name, value) in champion_ids["data"].items()}
+            "champions": {
+                int(value["key"]): champion_name
+                for (champion_name, value) in champion_ids["data"].items()
+            }
         }
         champion_data_builder["version"] = self.game_version
         champion_data_builder["skins"] = {}
@@ -117,13 +131,15 @@ class ChampionData:
                     champion_data_builder["skins"][skin["id"]] = skin["name"]
                     if "chromas" in skin:
                         for chroma in skin["chromas"]:
-                            champion_data_builder["skins"][chroma["id"]] = chroma["name"] + " (Chroma)"
+                            champion_data_builder["skins"][chroma["id"]] = (
+                                chroma["name"] + " (Chroma)"
+                            )
 
         return champion_data_builder
 
     def get_champion_data(self):
-        CHAMPION_FILE_PATH = f"data{os.path.sep}champion_data.json"
-        FOLDER_PATH = f"data{os.path.sep}"
+        CHAMPION_FILE_PATH = rf"data{os.path.sep}champion_data.json"
+        FOLDER_PATH = rf"data{os.path.sep}"
 
         if not os.path.exists(FOLDER_PATH):
             os.makedirs(os.path.dirname(CHAMPION_FILE_PATH))
@@ -204,7 +220,9 @@ class AccountChecker:
 
         self.session.post(url=Constants.AUTH_URL, headers=headers, json=auth_data)
 
-        response = self.session.put(url=Constants.AUTH_URL, headers=headers, json=login_data).json()
+        response = self.session.put(
+            url=Constants.AUTH_URL, headers=headers, json=login_data
+        ).json()
 
         # print (response, '-=-=-')
         # uri format
@@ -233,9 +251,14 @@ class AccountChecker:
             "location": Constants.LOCATION_PARAMETERS[self.region_id],
             "accountId": self.user_info["pvpnet_account_id"],
         }
-        query_string = "&".join([f"{k}={v}" for k, v in query.items()] + [f"inventoryTypes={t}" for t in types])
+        query_string = "&".join(
+            [f"{k}={v}" for k, v in query.items()]
+            + [f"inventoryTypes={t}" for t in types]
+        )
 
-        response = self.session.get(url=Constants.INVENTORY_URL.format(region_id=self.region_id) + query_string)
+        response = self.session.get(
+            url=Constants.INVENTORY_URL.format(region_id=self.region_id) + query_string
+        )
 
         try:
             result = response.json()["data"]["items"]
@@ -244,20 +267,28 @@ class AccountChecker:
             print(f"Response: {response.json()}")
             return {"CHAMPION": [], "CHAMPION_SKINS": []}
 
-        result["CHAMPION"] = [champion_data["champions"][str(id)] for id in result["CHAMPION"]]
-        result["CHAMPION_SKIN"] = [champion_data["skins"][str(id)] for id in result["CHAMPION_SKIN"]]
+        result["CHAMPION"] = [
+            champion_data["champions"][str(id)] for id in result["CHAMPION"]
+        ]
+        result["CHAMPION_SKIN"] = [
+            champion_data["skins"][str(id)] for id in result["CHAMPION_SKIN"]
+        ]
 
         return result
 
     def get_balance(self):
         response = self.session.get(
-            Constants.STORE_URL.format(store_front_id=Constants.STORE_FRONTS[self.region_id])
+            Constants.STORE_URL.format(
+                store_front_id=Constants.STORE_FRONTS[self.region_id]
+            )
         ).json()
         return response["player"]
 
     def get_purchase_history(self):
         response = self.session.get(
-            Constants.HISTORY_URL.format(store_front_id=Constants.STORE_FRONTS[self.region_id])
+            Constants.HISTORY_URL.format(
+                store_front_id=Constants.STORE_FRONTS[self.region_id]
+            )
         ).json()
         return response
 
@@ -265,7 +296,9 @@ class AccountChecker:
         history = self.purchase_history
         refund_num = history["refundCreditsRemaining"]
         refundables = [
-            x["amountSpent"] for x in history["transactions"] if x["refundable"] and x["currencyType"] == "RP"
+            x["amountSpent"]
+            for x in history["transactions"]
+            if x["refundable"] and x["currencyType"] == "RP"
         ]
         result = sum(sorted(refundables, reverse=True)[:refund_num])
         return result
@@ -274,27 +307,38 @@ class AccountChecker:
         history = self.purchase_history
         refund_num = history["refundCreditsRemaining"]
         refundables = [
-            x["amountSpent"] for x in history["transactions"] if x["refundable"] and x["currencyType"] == "IP"
+            x["amountSpent"]
+            for x in history["transactions"]
+            if x["refundable"] and x["currencyType"] == "IP"
         ]
         result = sum(sorted(refundables, reverse=True)[:refund_num])
         return result
 
     def last_play(self):
         response = self.session.get(
-            Constants.NEW_MATCHES_URL.format(region_id=self.region_id, account_id=self.account_id)
+            Constants.NEW_MATCHES_URL.format(
+                region_id=self.region_id, account_id=self.account_id
+            )
         ).json()
 
         try:
-            recent_match_date = list(response["data"]["matches"])[0]["gameCreation"]
-            return datetime.strptime(recent_match_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+            recent_match_date = list(response["data"]["matches"])
         except:
             print(f"Failed getting recent match of {self.username}")
             print(f"Response: {response}")
             return "Unknown"
 
+        if len(recent_match_date) > 0:
+            return datetime.strptime(
+                recent_match_date[0]["gameCreation"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+        return "Unavailable"
+
     def get_rank(self):
         response = requests.get(
-            Constants.RANK_URL.format(region_id=self.region_id, summoner_name=self.summoner_name)
+            Constants.RANK_URL.format(
+                region_id=self.region_id, summoner_name=self.summoner_name
+            )
         ).json()
 
         try:
@@ -379,13 +423,23 @@ print(f"Took {time2-time1:.2f} s")
 time1 = time.time()
 formated_time = datetime.fromtimestamp(time1).strftime("%Y-%m-%d_%H-%M-%S")
 print(f"Checking accounts, please wait...")
+
+ACCOUNTS_FOLDER_PATH = rf"output{os.path.sep}"
+
+if not os.path.exists(ACCOUNTS_FOLDER_PATH):
+    os.makedirs(os.path.dirname(ACCOUNTS_FOLDER_PATH))
+
 for account in account_list:
     try:
         (username, password) = account.split(":")
         # To use a proxy, may not work
         # account_checker = AccountChecker(username, password, {"https": "https://PROXY:PORT"})
         account_checker = AccountChecker(username, password)
-        with open(f"accounts {str(formated_time)}.txt", "a", encoding="utf-8") as account_writer:
+        with open(
+            f"{ACCOUNTS_FOLDER_PATH}accounts {str(formated_time)}.txt",
+            "a",
+            encoding="utf-8",
+        ) as account_writer:
             account_writer.write(account_checker.print_info())
     except:
         print(f"Error occured while checking {username}")

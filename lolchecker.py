@@ -12,11 +12,11 @@ if os.path.exists(rf"checker.env"):
         ENV_DICT = dict(
             tuple(line.replace("\n", "").split("="))
             for line in f.readlines()
-            if not line.startswith("#")
+            if not line.startswith("#") or not line.strip()
         )
 
         ACCOUNTS = ENV_DICT["ACCOUNTS"]
-        TIMEOUT = ENV_DICT["TIMEOUT"]
+        TIMEOUT = int(ENV_DICT["TIMEOUT"])
 
 
 class Constants:

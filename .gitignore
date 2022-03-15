@@ -1,4 +1,4 @@
 # Ignore Folder/File from data
 data
 output
-checker.env
+*.env

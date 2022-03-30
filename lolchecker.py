@@ -21,7 +21,7 @@ with open(rf"checker.env", "r") as f:
     ENV_DICT = dict(
         tuple(line.replace("\n", "").split("="))
         for line in f.readlines()
-        if not line.startswith("#") or not line.strip()
+        if not line.startswith("#") and line.strip()
     )
 
     ACCOUNTS = ENV_DICT["ACCOUNTS"]

@@ -1,5 +1,7 @@
 from datetime import datetime
-import requests, os, concurrent.futures, json, time, traceback
+import requests, os, concurrent.futures, json, time, traceback, ssl, re
+from requests.adapters import HTTPAdapter
+from collections import OrderedDict
 
 #
 # Please rename checker.env.example to checker.env and place information their instead
@@ -104,6 +106,27 @@ class Constants:
         "TR1": "tr",
     }
 
+    CIPHERS = [
+        "ECDHE-ECDSA-AES128-GCM-SHA256",
+        "ECDHE-ECDSA-CHACHA20-POLY1305",
+        "ECDHE-RSA-AES128-GCM-SHA256",
+        "ECDHE-RSA-CHACHA20-POLY1305",
+        "ECDHE+AES128",
+        "RSA+AES128",
+        "ECDHE+AES256",
+        "RSA+AES256",
+        "ECDHE+3DES",
+        "RSA+3DES",
+    ]
+
+
+class SSLAdapter(HTTPAdapter):
+    def init_poolmanager(self, *a, **k) -> None:
+        c = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        c.set_ciphers(":".join(Constants.CIPHERS))
+        k["ssl_context"] = c
+        return super(SSLAdapter, self).init_poolmanager(*a, **k)
+
 
 class ChampionData:
     def __init__(self):
@@ -185,13 +208,11 @@ class AccountChecker:
         self.session.proxies.update(proxy)
 
         tokens = self._authorize()
-        self.access_token = tokens[1]
-        self.id_token = tokens[3]
+        self.access_token = tokens[0]
+        self.id_token = tokens[1]
 
         auth = {
-            "Accept-Encoding": "deflate, gzip",
-            "user-agent": "RiotClient/44.0.1.4223069.4190634 lol-inventory (Windows;10;;Professional, x64)",
-            "Accept": "application/json",
+            "User-Agent": "RiotClient/58.0.0.4640299.4552318 %s (Windows;10;;Professional, x64)",
             "Authorization": f"Bearer {self.access_token}",
         }
 
@@ -206,17 +227,22 @@ class AccountChecker:
         self.purchase_history = self.get_purchase_history()
 
     def _authorize(self):
-        headers = {
-            "user-agent": "RiotClient/44.0.1.4223069.4190634 rso-auth (Windows;10;;Professional, x64)",
-            "Accept": "application/json",
-        }
+        headers = OrderedDict(
+            {
+                "User-Agent": "RiotClient/58.0.0.4640299.4552318 %s (Windows;10;;Professional, x64)",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept": "application/json, text/plain, */*",
+            }
+        )
 
         auth_data = {
+            "acr_values": "urn:riot:bronze",
+            "claims": "",
             "client_id": "riot-client",
-            "nonce": "1",
+            "nonce": "oYnVwCSrlS5IHKh7iI16oQ",
             "redirect_uri": "http://localhost/redirect",
             "response_type": "token id_token",
-            "scope": "openid offline_access lol ban profile email phone",
+            "scope": "openid link ban lol_region",
         }
 
         login_data = {
@@ -226,6 +252,10 @@ class AccountChecker:
             "type": "auth",
             "username": self.username,
         }
+
+        self.session.headers = headers
+
+        self.session.mount("https://", SSLAdapter())
 
         self.session.post(url=Constants.AUTH_URL, headers=headers, json=auth_data)
 
@@ -239,18 +269,22 @@ class AccountChecker:
         # &scope=...&id_token=...&token_type=
         # &expires_in=...
         try:
-            uri = response["response"]["parameters"]["uri"]
+            pattern = re.compile(
+                "access_token=((?:[a-zA-Z]|\d|\.|-|_)*).*id_token=((?:[a-zA-Z]|\d|\.|-|_)*).*expires_in=(\d*)"
+            )
+            data = pattern.findall(response["response"]["parameters"]["uri"])[0]
+            token = data[0]
+            token_id = data[1]
+            return [token, token_id]
         except:
             print(f"Error authenticating {self.username}!")
             print(f"Response: {response}")
             raise
 
-        tokens = [x.split("&")[0] for x in uri.split("=")]
-        return tokens
-
     def _get_user_info(self):
-        return self.session.post(url=Constants.INFO_URL).json()
+        return self.session.get(url=Constants.INFO_URL).json()
 
+    # Broken at the moment
     def get_inventory(self, types=Constants.INVENTORY_TYPES):
         champion_data_builder = ChampionData()
         champion_data = champion_data_builder.get_champion_data()
@@ -265,8 +299,18 @@ class AccountChecker:
             + [f"inventoryTypes={t}" for t in types]
         )
 
+        self.session.mount("https://", SSLAdapter())
+
+        auth = {
+            "User-Agent": "RiotClient/58.0.0.4640299.4552318 %s (Windows;10;;Professional, x64)",
+            "Authorization": f"Bearer {self.access_token}",
+        }
+
+        self.session.headers.update(auth)
+
         response = self.session.get(
-            url=Constants.INVENTORY_URL.format(region_id=self.region_id) + query_string
+            url=Constants.INVENTORY_URL.format(region_id=self.region_id) + query_string,
+            json={},
         )
 
         try:
@@ -373,7 +417,7 @@ class AccountChecker:
             return "False"
 
     def print_info(self):
-        inventory_data = self.get_inventory()
+        # inventory_data = self.get_inventory()
         rank = self.get_rank()
         ip_value = self.refundable_IP()
         rp_value = self.refundable_RP()
@@ -384,8 +428,8 @@ class AccountChecker:
         level = self.user_info["lol_account"]["summoner_level"]
         balance = self.get_balance()
         last_game = self.last_play()
-        champions = ", ".join(inventory_data["CHAMPION"])
-        champion_skins = ", ".join(inventory_data["CHAMPION_SKIN"])
+        champions = ""  # ", ".join(inventory_data["CHAMPION"])
+        champion_skins = ""  # ", ".join(inventory_data["CHAMPION_SKIN"])
         rp_curr = balance["rp"]
         ip_curr = balance["ip"]
         ret_str = [
@@ -401,10 +445,10 @@ class AccountChecker:
             f"Banned: {ban_status}",
             "\n",
             "\n",
-            f"Champions ({len(inventory_data['CHAMPION'])}): {champions}",
+            f"Champions ({0}): {champions}",
             "\n",
             "\n",
-            f"Skins ({len(inventory_data['CHAMPION_SKIN'])}): {champion_skins}",
+            f"Skins ({0}): {champion_skins}",
             "\n",
             "\n",
             "\n",

@@ -1,7 +1,5 @@
 # League Of Legends Account Checker
 
-!!! NO LONGER WORKING !!!
-
 Retrieve information about a league of legends account. Region independent, it will return the following values:
 
 Accounts will be in a file named "output/accounts 1234-56-78_90-12.txt", created where the script is ran.
@@ -16,8 +14,8 @@ Accounts will be in a file named "output/accounts 1234-56-78_90-12.txt", created
 - Refundable IP & RP
 - Refunds
 - Ban Status
-- Champions
-- Skins
+- Champions - BROKEN
+- Skins - BROKEN
 
 ## Usage
 
